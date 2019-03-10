@@ -5,6 +5,9 @@ import operator
 import os
 
 def get_distance_from_line(line, point):
+    """
+
+    """
     # line slope
     a = line['a']
     # line intercept
@@ -23,11 +26,17 @@ def get_distance_from_line(line, point):
 
 class dial_indicator_KI():
     def __init__(self):
+        """
+
+        """
         self.center = None
         self.radius = None
         self.contours = None
 
     def get_center_w_hough(self, img):
+        """
+
+        """
         cimg = img.copy()
         cimg = cv2.medianBlur(cimg,5)
         h,w = img.shape
@@ -53,6 +62,9 @@ class dial_indicator_KI():
         return cimg
 
     def get_center_w_max_child_contour(self, img):
+        """
+
+        """
         # apply blurring
         self.blur = cv2.GaussianBlur(img,(9,9),0)
         # adaptive thresholding
@@ -77,12 +89,18 @@ class dial_indicator_KI():
         return self.center, self.radius
 
     def get_masked_img(self,img):
+        """
+
+        """
         if not hasattr(self, 'self.mask'):
             mask = np.zeros_like(img)
             self.mask = cv2.circle(mask,self.center,self.radius,(255,0,0),-1)
         cimg = cv2.bitwise_and(img,self.mask)
         return cimg
     def normalised_img(self, img):
+        """
+
+        """
         if hasattr(self, 'self.mask'):
             roihist,roihist,0,255,cv2.NORM_MINMAX
             norm_img = cv2.normalize(img, None, alpha=0, beta=255,
@@ -93,29 +111,45 @@ class dial_indicator_KI():
         return norm_img
 
     def get_ticks(self):
+        """
+
+        """
         pass
 
-    def get_dial_value(self):
-        pass
+    def get_dial_value(self, img):
+        """
+        Gets dial readout as an angle
+        """
+        cimg = img.copy()
+        cimg = cv2.medianBlur(cimg,5)
+        mask = np.zeros_like(raw_img)
+        radius = int(self.radius*0.6)
+        mask = cv2.circle(mask,self.center,radius,(255,0,0),-1)
+        mask = cv2.circle(mask,self.center,int(radius*0.2),(0,0,255),int(radius*0.5))
+        cimg = cv2.bitwise_and(cimg, mask)
+        edges = cv2.Canny(cimg,50,150,apertureSize = 3)
+        minLineLength = int(radius*0.3)
+        maxLineGap = 5
+        lines = cv2.HoughLinesP(edges,1,np.pi/180,75,minLineLength,maxLineGap)
+        if lines is not None:
+            for line in lines:
+                for x1,y1,x2,y2 in line:
+                    cv2.line(cimg,(x1,y1),(x2,y2),(255,255,0),1)
+        return cimg
 
     def get_avg_mask(self):
+        """
+
+        """
         pass
 
     def get_lines(self, img, mask=None):
         """
-        edges = cv2.Canny(mask_inside,100,200)
 
-        minLineLength = 100
-        maxLineGap = 1
-        lines = cv2.HoughLinesP(edges,1,np.pi/180,100,minLineLength,maxLineGap)
-        if lines:
-            for line in lines:
-                for x1,y1,x2,y2 in line:
-                    cv2.line(mask_inside,(x1,y1),(x2,y2),(255,255,0),2)"""
+        """
         if mask is not None:
             img = cv2.bitwise_and(img,mask)
         self.edges = cv2.Canny(img,30,100,apertureSize = 3)
-
         minLineLength = 20
         maxLineGap = 2
         lines = cv2.HoughLinesP(self.edges,1,np.pi/180,40,minLineLength,maxLineGap)
@@ -157,6 +191,9 @@ class dial_indicator_KI():
                 cv2.line(img,(x1,y1),(x2,y2),(0,0,255),2)"""
         return img
     def get_dial_axis_w_hough(self, img, mask=None):
+        """
+
+        """
         cimg = img.copy()
         cimg = cv2.medianBlur(cimg,5)
         mask_radius = int(self.radius*0.2)
@@ -187,7 +224,7 @@ class dial_indicator_KI():
     mask_full = cv2.circle(mask_full,center,r1,(255,0,0),-1)
     mask_inside = cv2.circle(mask_inside,center,r2,(255,0,0),-1)
     # draw white circles to get full contours
-    kernel = np.ones((2,2),np.uint8)
+
     #erosion = cv2.erode(thresh,kernel,iterations = 1)
     erosion = cv2.bitwise_and(thresh,thresh,mask = mask_full)
     erosion = cv2.bitwise_and(erosion,erosion,mask = cv2.bitwise_not(mask_inside))
@@ -235,8 +272,9 @@ if __name__=="__main__":
                 hough_lines = dial.get_lines(norm_img, mask=mask_inside)
                 hough_dial_axis = dial.get_dial_axis_w_hough(raw_img)
                 edges = dial.edges
+                dial_value = dial.get_dial_value(raw_img)
                 cv2.drawMarker(hough_circles, dial.center, (255,0,0), cv2.MARKER_CROSS, 50,1)
-                images = [raw_img, center_img, edges, hough_circles, dial.edges, hough_dial_axis]
+                images = [raw_img, center_img, edges, hough_circles, dial_value, hough_dial_axis]
                 titles = []
                 plt.subplot(2,3,1),plt.imshow(images[0],'gray')
                 plt.subplot(2,3,2),plt.imshow(images[1],'gray')
